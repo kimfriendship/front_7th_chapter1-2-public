@@ -1,0 +1,67 @@
+import { EventForm } from '../../types';
+import { generateRepeatEvents } from '../../utils/repeatSchedule';
+
+describe('generateRepeatEvents - TC-001: 매일 반복 일정 생성', () => {
+  const baseEvent: EventForm = {
+    title: '테스트 일정',
+    date: '2025-01-01',
+    startTime: '09:00',
+    endTime: '10:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'daily', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 10,
+  };
+
+  it('2025-01-01부터 매일 반복 일정을 생성하면 365개의 일정이 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(365);
+  });
+
+  it('첫 번째 일정의 날짜는 시작 날짜와 일치해야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events[0].date).toBe('2025-01-01');
+  });
+
+  it('마지막 일정의 날짜는 종료 날짜와 일치해야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events[events.length - 1].date).toBe('2025-12-31');
+  });
+
+  it('연속된 날짜 사이의 간격이 1일인지 확인한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    for (let i = 0; i < events.length - 1; i++) {
+      const currentDate = new Date(events[i].date);
+      const nextDate = new Date(events[i + 1].date);
+      const diffDays = (nextDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24);
+      expect(diffDays).toBe(1);
+    }
+  });
+
+  it('모든 일정이 동일한 제목, 시간, 설명 등의 정보를 가져야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    events.forEach((event) => {
+      expect(event.title).toBe(baseEvent.title);
+      expect(event.startTime).toBe(baseEvent.startTime);
+      expect(event.endTime).toBe(baseEvent.endTime);
+      expect(event.description).toBe(baseEvent.description);
+      expect(event.location).toBe(baseEvent.location);
+      expect(event.category).toBe(baseEvent.category);
+      expect(event.notificationTime).toBe(baseEvent.notificationTime);
+    });
+  });
+
+  it('반복 일정은 일정 겹침을 고려하지 않는다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    // 같은 시간대의 일정이 여러 개 있어도 문제없어야 함
+    expect(events.length).toBe(365);
+    expect(events.every((e) => e.startTime === '09:00' && e.endTime === '10:00')).toBe(true);
+  });
+});
