@@ -73,6 +73,49 @@ function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
 }
 
 /**
+ * 매월 반복 일정을 생성합니다.
+ * @param eventForm 원본 이벤트 폼 데이터
+ * @param startDate 시작 날짜
+ * @param endDate 종료 날짜 семьи
+ * @returns 생성된 반복 일정 배열
+ */
+function generateMonthlyRepeatEvents(
+  eventForm: EventForm,
+  startDate: Date,
+  endDate: Date
+): Event[] {
+  const events: Event[] = [];
+  const startDay = startDate.getDate();
+  const currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    // 해당 월에 시작 일이 존재하는 경우에만 일정 생성
+    if (startDay <= daysInMonth) {
+      const eventDate = new Date(year, month - 1, startDay);
+
+      // 종료 날짜를 넘지 않는 경우에만 추가
+      if (eventDate <= endDate) {
+        events.push({
+          ...eventForm,
+          id: generateId(),
+          date: formatDate(eventDate),
+        });
+      }
+    }
+
+    // 다음 달로 이동
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    currentDate.setDate(1); // 월 초로 설정
+  }
+
+  return events;
+}
+
+/**
  * 반복 일정을 생성하는 함수
  * @param eventForm 반복 일정의 원본 이벤트 폼 데이터
  * @returns 생성된 반복 일정 배열
@@ -107,6 +150,11 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
   // 매주 반복 처리
   if (repeat.type === 'weekly') {
     return generateWeeklyRepeatEvents(eventForm, startDate, endDate);
+  }
+
+  // 매월 반복 처리
+  if (repeat.type === 'monthly') {
+    return generateMonthlyRepeatEvents(eventForm, startDate, endDate);
   }
 
   return [];
