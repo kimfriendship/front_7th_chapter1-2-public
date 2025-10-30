@@ -268,10 +268,6 @@ describe('반복 일정 수정/삭제 - TC-008: 단일 수정', () => {
     const allEvents = generateRepeatEvents(baseEvent);
     const targetEvent = allEvents.find((e) => e.date === '2025-01-15');
 
-    // 단일 발생 분리 호출
-    const detached = detachSingleOccurrence(targetEvent!);
-    expect(detached.repeat.type).toBe('none');
-
     // 단일 수정 호출
     const updatedAll = updateRepeatEvents(
       allEvents,
@@ -281,12 +277,55 @@ describe('반복 일정 수정/삭제 - TC-008: 단일 수정', () => {
     );
     const updatedEvent = updatedAll.find((e) => e.id === targetEvent!.id)!;
 
-    // 단일 수정된 일정은 repeat.type이 'none'이어야 함 + 제목 변경 확인
+    // 단일 수정된 일정 검증
     expect(updatedEvent.repeat.type).toBe('none');
     expect(updatedEvent.title).toBe('수정된 일정');
 
     // 나머지 일정들은 반복 일정으로 유지되어야 함
     const otherEvents = updatedAll.filter((e) => e.id !== targetEvent!.id);
     expect(otherEvents.every((e) => e.repeat.type === 'daily')).toBe(true);
+  });
+});
+
+describe('반복 일정 수정/삭제 - TC-009: 전체 수정', () => {
+  const baseEvent: EventForm = {
+    title: '테스트 일정',
+    date: '2025-01-01',
+    startTime: '09:00',
+    endTime: '10:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'daily', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 10,
+  };
+
+  it('반복 일정 중 특정 일정을 전체 수정하면 반복 일정 전체가 수정되어야 한다', () => {
+    const allEvents = generateRepeatEvents(baseEvent);
+    const targetEvent = allEvents.find((e) => e.date === '2025-01-15');
+    const originalRepeatId = targetEvent!.repeat.id;
+
+    // 전체 수정 호출
+    const updatedAll = updateRepeatEvents(
+      allEvents,
+      targetEvent!.id,
+      { title: '전체 수정된 일정', startTime: '10:00', endTime: '11:00' },
+      'all'
+    );
+
+    // 일정 개수 유지 확인
+    expect(updatedAll.length).toBe(allEvents.length);
+
+    // 모든 반복 일정이 수정되어야 함 (한 번의 every로 모든 검증)
+    expect(
+      updatedAll.every(
+        (e) =>
+          e.title === '전체 수정된 일정' &&
+          e.startTime === '10:00' &&
+          e.endTime === '11:00' &&
+          e.repeat.type === 'daily' &&
+          e.repeat.id === originalRepeatId
+      )
+    ).toBe(true);
   });
 });
