@@ -11,6 +11,31 @@ function generateId(): string {
 }
 
 /**
+ * Event를 생성하고 repeat.id를 설정합니다.
+ * @param eventForm 이벤트 폼 데이터
+ * @param id 이벤트 ID
+ * @param date 날짜
+ * @param repeatId 반복 일정 그룹 ID
+ * @returns 생성된 Event
+ */
+function createEventWithRepeatId(
+  eventForm: EventForm,
+  id: string,
+  date: string,
+  repeatId: string
+): Event {
+  return {
+    ...eventForm,
+    id,
+    date,
+    repeat: {
+      ...eventForm.repeat,
+      id: repeatId,
+    },
+  };
+}
+
+/**
  * 시작 날짜와 종료 날짜의 유효성을 검증합니다.
  * @param startDate 시작 날짜
  * @param endDate 종료 날짜
@@ -39,15 +64,9 @@ function generateRepeatEventsWithInterval(
   const currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
-    events.push({
-      ...eventForm,
-      id: generateId(),
-      date: formatDate(currentDate),
-      repeat: {
-        ...eventForm.repeat,
-        id: repeatId,
-      },
-    });
+    events.push(
+      createEventWithRepeatId(eventForm, generateId(), formatDate(currentDate), repeatId)
+    );
 
     currentDate.setDate(currentDate.getDate() + dayInterval);
   }
@@ -114,15 +133,7 @@ function createEventIfValid(
 
   // 종료 날짜를 넘지 않는 경우에만 일정 생성
   if (eventDate <= endDate) {
-    return {
-      ...eventForm,
-      id: generateId(),
-      date: formatDate(eventDate),
-      repeat: {
-        ...eventForm.repeat,
-        id: repeatId,
-      },
-    };
+    return createEventWithRepeatId(eventForm, generateId(), formatDate(eventDate), repeatId);
   }
 
   return null;
@@ -254,6 +265,76 @@ export function detachSingleOccurrence(event: Event): Event {
 }
 
 /**
+ * 일반 일정을 단일 수정합니다.
+ * @param events 이벤트 배열
+ * @param occurrenceId 수정할 일정의 ID
+ * @param updates 업데이트 내용
+ * @returns 업데이트된 이벤트 배열
+ */
+function updateSingleNonRepeatEvent(
+  events: Event[],
+  occurrenceId: string,
+  updates: Partial<Event>
+): Event[] {
+  return events.map((event) => {
+    if (event.id === occurrenceId) {
+      return {
+        ...event,
+        ...updates,
+      };
+    }
+    return event;
+  });
+}
+
+/**
+ * 반복 일정의 단일 발생 건을 수정하고 반복에서 분리합니다.
+ * @param events 이벤트 배열
+ * @param occurrenceId 수정할 일정의 ID
+ * @param updates 업데이트 내용
+ * @returns 업데이트된 이벤트 배열
+ */
+function updateSingleOccurrence(
+  events: Event[],
+  occurrenceId: string,
+  updates: Partial<Event>
+): Event[] {
+  return events.map((event) => {
+    if (event.id === occurrenceId) {
+      return {
+        ...event,
+        ...updates,
+        repeat: {
+          ...event.repeat,
+          type: 'none',
+          id: undefined, // 반복 그룹에서 분리
+        },
+      };
+    }
+    return event;
+  });
+}
+
+/**
+ * 반복 일정 그룹의 모든 발생 건을 수정합니다.
+ * @param events 이벤트 배열
+ * @param repeatId 반복 일정 그룹 ID
+ * @param updates 업데이트 내용
+ * @returns 업데이트된 이벤트 배열
+ */
+function updateAllOccurrences(events: Event[], repeatId: string, updates: Partial<Event>): Event[] {
+  return events.map((event) => {
+    if (event.repeat.id === repeatId) {
+      return {
+        ...event,
+        ...updates,
+      };
+    }
+    return event;
+  });
+}
+
+/**
  * 반복 일정의 특정 발생 건이나 전체를 업데이트합니다.
  * @param events 반복 일정 배열
  * @param occurrenceId 업데이트할 일정의 ID
@@ -278,45 +359,15 @@ export function updateRepeatEvents(
   if (!repeatId) {
     // repeat.id가 없으면 일반 일정이므로 단일 수정만 가능
     if (mode === 'single') {
-      return events.map((event) => {
-        if (event.id === occurrenceId) {
-          return {
-            ...event,
-            ...updates,
-          };
-        }
-        return event;
-      });
+      return updateSingleNonRepeatEvent(events, occurrenceId, updates);
     }
     return events;
   }
 
   if (mode === 'single') {
-    // 단일 수정: 해당 일정만 수정하고 반복에서 분리
-    return events.map((event) => {
-      if (event.id === occurrenceId) {
-        return {
-          ...event,
-          ...updates,
-          repeat: {
-            ...event.repeat,
-            type: 'none',
-            id: undefined, // 반복 그룹에서 분리
-          },
-        };
-      }
-      return event;
-    });
+    return updateSingleOccurrence(events, occurrenceId, updates);
   }
 
   // mode === 'all': 같은 반복 그룹의 모든 일정 수정
-  return events.map((event) => {
-    if (event.repeat.id === repeatId) {
-      return {
-        ...event,
-        ...updates,
-      };
-    }
-    return event;
-  });
+  return updateAllOccurrences(events, repeatId, updates);
 }
