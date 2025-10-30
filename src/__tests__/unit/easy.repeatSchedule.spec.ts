@@ -100,3 +100,43 @@ describe('generateRepeatEvents - TC-002: 매주 반복 일정 생성', () => {
     });
   });
 });
+
+describe('generateRepeatEvents - TC-003: 매월 반복 일정 생성 (일반 날짜)', () => {
+  const baseEvent: EventForm = {
+    title: '월간 회의',
+    date: '2025-01-15',
+    startTime: '10:00',
+    endTime: '11:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'monthly', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 15,
+  };
+
+  it('첫 번째 일정의 날짜는 시작 날짜와 일치해야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events[0].date).toBe('2025-01-15');
+  });
+
+  it('모든 일정이 15일에 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    events.forEach((event) => {
+      const date = new Date(event.date);
+      expect(date.getDate()).toBe(15);
+    });
+  });
+
+  it('1월부터 12월까지 각 월에 정확히 1개씩 일정이 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(12);
+
+    const actualMonths = events.map((event) => new Date(event.date).getMonth() + 1);
+    const expectedMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    expect(actualMonths).toEqual(expectedMonths);
+  });
+});
