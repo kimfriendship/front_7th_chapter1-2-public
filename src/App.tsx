@@ -155,6 +155,11 @@ function App() {
         return;
       }
 
+      // 편집 중이었다면 기존 이벤트 삭제 후 반복 일정 생성
+      if (editingEvent) {
+        await deleteEvent(editingEvent.id);
+      }
+
       // PRD 요구사항: "반복일정은 일정 겹침을 고려하지 않는다"
       // 충돌 검사 없이 바로 저장
       await saveEvents(repeatEvents);
@@ -452,7 +457,14 @@ function App() {
               control={
                 <Checkbox
                   checked={isRepeating}
-                  onChange={(e) => setIsRepeating(e.target.checked)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsRepeating(checked);
+                    // isRepeating이 true가 될 때 repeatType이 'none'이면 기본값 'daily'로 설정
+                    if (checked && repeatType === 'none') {
+                      setRepeatType('daily');
+                    }
+                  }}
                 />
               }
               label="반복 일정"
@@ -483,7 +495,7 @@ function App() {
                 <Select
                   size="small"
                   id="repeat-type"
-                  value={repeatType}
+                  value={repeatType === 'none' ? 'daily' : repeatType}
                   onChange={(e) => setRepeatType(e.target.value as RepeatType)}
                 >
                   <MenuItem id="daily-option" value="daily">
