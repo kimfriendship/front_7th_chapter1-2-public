@@ -21,13 +21,19 @@ function isValidDateRange(startDate: Date, endDate: Date): boolean {
 }
 
 /**
- * 매일 반복 일정을 생성합니다.
+ * 지정된 일수 간격으로 반복 일정을 생성합니다.
  * @param eventForm 원본 이벤트 폼 데이터
  * @param startDate 시작 날짜
  * @param endDate 종료 날짜
+ * @param dayInterval 날짜 증가 간격 (일)
  * @returns 생성된 반복 일정 배열
  */
-function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
+function generateRepeatEventsWithInterval(
+  eventForm: EventForm,
+  startDate: Date,
+  endDate: Date,
+  dayInterval: number
+): Event[] {
   const events: Event[] = [];
   const currentDate = new Date(startDate);
 
@@ -38,10 +44,21 @@ function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDat
       date: formatDate(currentDate),
     });
 
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate.setDate(currentDate.getDate() + dayInterval);
   }
 
   return events;
+}
+
+/**
+ * 매일 반복 일정을 생성합니다.
+ * @param eventForm 원본 이벤트 폼 데이터
+ * @param startDate 시작 날짜
+ * @param endDate 종료 날짜
+ * @returns 생성된 반복 일정 배열
+ */
+function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
+  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 1);
 }
 
 /**
@@ -52,20 +69,7 @@ function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDat
  * @returns 생성된 반복 일정 배열
  */
 function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
-  const events: Event[] = [];
-  const currentDate = new Date(startDate);
-
-  while (currentDate <= endDate) {
-    events.push({
-      ...eventForm,
-      id: generateId(),
-      date: formatDate(currentDate),
-    });
-
-    currentDate.setDate(currentDate.getDate() + 7);
-  }
-
-  return events;
+  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 7);
 }
 
 /**
