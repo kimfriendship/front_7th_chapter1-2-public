@@ -32,7 +32,8 @@ function generateRepeatEventsWithInterval(
   eventForm: EventForm,
   startDate: Date,
   endDate: Date,
-  dayInterval: number
+  dayInterval: number,
+  repeatId: string
 ): Event[] {
   const events: Event[] = [];
   const currentDate = new Date(startDate);
@@ -42,6 +43,10 @@ function generateRepeatEventsWithInterval(
       ...eventForm,
       id: generateId(),
       date: formatDate(currentDate),
+      repeat: {
+        ...eventForm.repeat,
+        id: repeatId,
+      },
     });
 
     currentDate.setDate(currentDate.getDate() + dayInterval);
@@ -57,8 +62,13 @@ function generateRepeatEventsWithInterval(
  * @param endDate 종료 날짜
  * @returns 생성된 반복 일정 배열
  */
-function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
-  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 1);
+function generateDailyRepeatEvents(
+  eventForm: EventForm,
+  startDate: Date,
+  endDate: Date,
+  repeatId: string
+): Event[] {
+  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 1, repeatId);
 }
 
 /**
@@ -66,10 +76,16 @@ function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDat
  * @param eventForm 원본 이벤트 폼 데이터
  * @param startDate 시작 날짜
  * @param endDate 종료 날짜
+ * @param repeatId 반복 일정 그룹 ID
  * @returns 생성된 반복 일정 배열
  */
-function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
-  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 7);
+function generateWeeklyRepeatEvents(
+  eventForm: EventForm,
+  startDate: Date,
+  endDate: Date,
+  repeatId: string
+): Event[] {
+  return generateRepeatEventsWithInterval(eventForm, startDate, endDate, 7, repeatId);
 }
 
 /**
@@ -86,7 +102,8 @@ function createEventIfValid(
   year: number,
   month: number,
   day: number,
-  endDate: Date
+  endDate: Date,
+  repeatId: string
 ): Event | null {
   const daysInMonth = getDaysInMonth(year, month);
   if (day > daysInMonth) {
@@ -101,6 +118,10 @@ function createEventIfValid(
       ...eventForm,
       id: generateId(),
       date: formatDate(eventDate),
+      repeat: {
+        ...eventForm.repeat,
+        id: repeatId,
+      },
     };
   }
 
@@ -117,7 +138,8 @@ function createEventIfValid(
 function generateMonthlyRepeatEvents(
   eventForm: EventForm,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  repeatId: string
 ): Event[] {
   const events: Event[] = [];
   const startDay = startDate.getDate();
@@ -126,7 +148,7 @@ function generateMonthlyRepeatEvents(
   while (currentDate <= endDate) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    const event = createEventIfValid(eventForm, year, month, startDay, endDate);
+    const event = createEventIfValid(eventForm, year, month, startDay, endDate, repeatId);
 
     if (event) {
       events.push(event);
@@ -147,7 +169,12 @@ function generateMonthlyRepeatEvents(
  * @param endDate 종료 날짜
  * @returns 생성된 반복 일정 배열
  */
-function generateYearlyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
+function generateYearlyRepeatEvents(
+  eventForm: EventForm,
+  startDate: Date,
+  endDate: Date,
+  repeatId: string
+): Event[] {
   const events: Event[] = [];
   const startMonth = startDate.getMonth() + 1;
   const startDay = startDate.getDate();
@@ -156,7 +183,7 @@ function generateYearlyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
 
   // 시작 년도부터 종료 년도까지 반복
   for (let year = startYear; year <= endYear; year++) {
-    const event = createEventIfValid(eventForm, year, startMonth, startDay, endDate);
+    const event = createEventIfValid(eventForm, year, startMonth, startDay, endDate, repeatId);
 
     if (event) {
       events.push(event);
@@ -193,16 +220,19 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
     return [];
   }
 
+  // 반복 일정 그룹 ID 생성
+  const repeatId = generateId();
+
   // 반복 유형에 따라 처리
   switch (repeat.type) {
     case 'daily':
-      return generateDailyRepeatEvents(eventForm, startDate, endDate);
+      return generateDailyRepeatEvents(eventForm, startDate, endDate, repeatId);
     case 'weekly':
-      return generateWeeklyRepeatEvents(eventForm, startDate, endDate);
+      return generateWeeklyRepeatEvents(eventForm, startDate, endDate, repeatId);
     case 'monthly':
-      return generateMonthlyRepeatEvents(eventForm, startDate, endDate);
+      return generateMonthlyRepeatEvents(eventForm, startDate, endDate, repeatId);
     case 'yearly':
-      return generateYearlyRepeatEvents(eventForm, startDate, endDate);
+      return generateYearlyRepeatEvents(eventForm, startDate, endDate, repeatId);
     default:
       return [];
   }
@@ -210,26 +240,83 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
 
 /**
  * 단일 발생 건을 반복에서 분리합니다.
- * 구현 예정: 해당 일정의 repeat를 none으로 변경하고, 식별자/메타를 적절히 처리
+ * @param event 반복에서 분리할 일정
+ * @returns repeat.type이 'none'으로 변경된 새로운 일정
  */
-export function detachSingleOccurrence(_event: Event): Event {
-  void _event;
-  throw new Error('Not implemented: detachSingleOccurrence');
+export function detachSingleOccurrence(event: Event): Event {
+  return {
+    ...event,
+    repeat: {
+      ...event.repeat,
+      type: 'none',
+    },
+  };
 }
 
 /**
  * 반복 일정의 특정 발생 건이나 전체를 업데이트합니다.
- * 구현 예정: mode에 따라 single/all 처리 분기
+ * @param events 반복 일정 배열
+ * @param occurrenceId 업데이트할 일정의 ID
+ * @param updates 적용할 업데이트 내용
+ * @param mode 'single'이면 해당 일정만 수정하고 반복에서 분리, 'all'이면 전체 수정
+ * @returns 업데이트된 일정 배열
  */
 export function updateRepeatEvents(
-  _events: Event[],
-  _occurrenceId: string,
-  _updates: Partial<Event>,
-  _mode: 'single' | 'all'
+  events: Event[],
+  occurrenceId: string,
+  updates: Partial<Event>,
+  mode: 'single' | 'all'
 ): Event[] {
-  void _events;
-  void _occurrenceId;
-  void _updates;
-  void _mode;
-  throw new Error('Not implemented: updateRepeatEvents');
+  // occurrenceId로 이벤트 찾기
+  const targetEvent = events.find((event) => event.id === occurrenceId);
+  if (!targetEvent) {
+    return events; // 해당 이벤트를 찾지 못하면 원본 반환
+  }
+
+  // 반복 일정 그룹 ID 확인
+  const repeatId = targetEvent.repeat.id;
+  if (!repeatId) {
+    // repeat.id가 없으면 일반 일정이므로 단일 수정만 가능
+    if (mode === 'single') {
+      return events.map((event) => {
+        if (event.id === occurrenceId) {
+          return {
+            ...event,
+            ...updates,
+          };
+        }
+        return event;
+      });
+    }
+    return events;
+  }
+
+  if (mode === 'single') {
+    // 단일 수정: 해당 일정만 수정하고 반복에서 분리
+    return events.map((event) => {
+      if (event.id === occurrenceId) {
+        return {
+          ...event,
+          ...updates,
+          repeat: {
+            ...event.repeat,
+            type: 'none',
+            id: undefined, // 반복 그룹에서 분리
+          },
+        };
+      }
+      return event;
+    });
+  }
+
+  // mode === 'all': 같은 반복 그룹의 모든 일정 수정
+  return events.map((event) => {
+    if (event.repeat.id === repeatId) {
+      return {
+        ...event,
+        ...updates,
+      };
+    }
+    return event;
+  });
 }
