@@ -173,25 +173,17 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
     return [];
   }
 
-  // 매일 반복 처리
-  if (repeat.type === 'daily') {
-    return generateDailyRepeatEvents(eventForm, startDate, endDate);
+  // 반복 유형에 따라 처리
+  switch (repeat.type) {
+    case 'daily':
+      return generateDailyRepeatEvents(eventForm, startDate, endDate);
+    case 'weekly':
+      return generateWeeklyRepeatEvents(eventForm, startDate, endDate);
+    case 'monthly':
+      return generateMonthlyRepeatEvents(eventForm, startDate, endDate);
+    case 'yearly':
+      return generateYearlyRepeatEvents(eventForm, startDate, endDate);
+    default:
+      return [];
   }
-
-  // 매주 반복 처리
-  if (repeat.type === 'weekly') {
-    return generateWeeklyRepeatEvents(eventForm, startDate, endDate);
-  }
-
-  // 매월 반복 처리
-  if (repeat.type === 'monthly') {
-    return generateMonthlyRepeatEvents(eventForm, startDate, endDate);
-  }
-
-  // 매년 반복 처리
-  if (repeat.type === 'yearly') {
-    return generateYearlyRepeatEvents(eventForm, startDate, endDate);
-  }
-
-  return [];
 }
