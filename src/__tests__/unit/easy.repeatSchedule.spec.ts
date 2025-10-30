@@ -140,3 +140,47 @@ describe('generateRepeatEvents - TC-003: 매월 반복 일정 생성 (일반 날
     expect(actualMonths).toEqual(expectedMonths);
   });
 });
+
+describe('generateRepeatEvents - TC-004: 매월 반복 일정 생성 (31일 처리)', () => {
+  const baseEvent: EventForm = {
+    title: '월말 정산',
+    date: '2025-01-31',
+    startTime: '18:00',
+    endTime: '19:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'monthly', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 60,
+  };
+
+  it('2025-01-31부터 매월 반복 일정을 생성하면 7개의 일정이 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(7); // 31일이 있는 월만: 1, 3, 5, 7, 8, 10, 12월
+  });
+
+  it('첫 번째 일정의 날짜는 시작 날짜와 일치해야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events[0].date).toBe('2025-01-31');
+  });
+
+  it('모든 일정이 31일에 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    events.forEach((event) => {
+      const date = new Date(event.date);
+      expect(date.getDate()).toBe(31);
+    });
+  });
+
+  it('31일이 있는 월(1, 3, 5, 7, 8, 10, 12월)에만 일정이 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    const actualMonths = events.map((event) => new Date(event.date).getMonth() + 1);
+    const expectedMonths = [1, 3, 5, 7, 8, 10, 12];
+
+    expect(actualMonths).toEqual(expectedMonths);
+  });
+});
