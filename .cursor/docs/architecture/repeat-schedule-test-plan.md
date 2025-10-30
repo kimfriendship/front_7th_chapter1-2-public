@@ -131,9 +131,104 @@
 
 ### 4.2 통합 테스트
 
-- `src/hooks/useRepeatSchedule.ts`: 반복 일정 훅 테스트
-- 전체 흐름 테스트
+목표: UI 상에서 반복 일정 생성/수정/삭제의 end-to-end 흐름을 검증한다. 캘린더 뷰(월/주)에 발생 건이 기대대로 반영되는지까지 포함한다.
 
-### 4.3 E2E 테스트 (수동)
+#### 테스트 환경/도구
 
-- UI에서 반복 일정 생성/수정/삭제 확인
+- 테스트 러너: Vitest
+- 렌더링: React Testing Library
+- 상호작용: `@testing-library/user-event`
+- 시간 고정: `vi.setSystemTime(new Date('2025-01-01T00:00:00'))`
+- 네트워크/스토리지: 실제 API 호출 없음. 로컬 상태/컨텍스트 기반이면 그대로 사용. 필요 시 `localStorage` mock
+- 병렬 안전성: 각 케이스는 독립 상태를 사용하여 병렬 실행해도 간섭이 없어야 함
+- API 격리: API가 개입되는 경우 반드시 `src/__mocks__/handlersUtils.ts`로 각 테스트별 독립 핸들러 구성
+- 레퍼런스: `src/__tests__/medium.integration.spec.tsx`의 환경 구성/패턴을 우선 참고
+
+#### 공통 시나리오 흐름 (Given-When-Then)
+
+- Given: 메인 `App`을 렌더링하고 초기 날짜를 2025-01-01로 고정한다
+- When: 일정 생성 다이얼로그를 열고 반복 옵션을 설정한 뒤 저장한다
+- Then: 월/주 뷰에서 해당 발생 건들이 정확히 표시되는지 확인한다
+
+#### UI 조작 가이드
+
+- 일정 생성: "일정 추가" 버튼 클릭 → 폼 입력(`title`, `date`, `startTime`, `endTime`, `repeat.type`, `repeat.interval`, `repeat.endDate`) → 저장
+- 반복 설정: MUI Select 사용 시 값은 `daily|weekly|monthly|yearly` 중 하나를 사용하고, 미선택은 빈 문자열('')로 처리하여 out-of-range 경고 방지
+- 뷰 전환: 상단 탭/버튼으로 "월간"/"주간" 전환 → 렌더된 셀 내 텍스트로 이벤트 노출 여부 확인
+
+#### 병렬 실행 및 API 격리 전략
+
+- 각 테스트는 독립적인 초기 상태를 갖도록 한다
+  - API 상호작용이 필요하면 `handlersUtils`의 팩토리 함수로 매 테스트마다 핸들러를 구성
+  - `beforeEach`에서 `server.resetHandlers()` 호출로 핸들러/상태 초기화
+- 전역 시계 고정은 테스트 간 공유되므로 `beforeEach`에서 매번 고정/해제 처리
+- DOM 컨테이너는 `render` 호출로 테스트마다 신규 생성하여 공유 금지
+
+예시:
+
+```ts
+// 공통: src/__tests__/integration/setup.ts (선택)
+import { server } from '../../setupTests';
+import { vi } from 'vitest';
+
+beforeEach(() => {
+  server.resetHandlers();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2025-01-01T00:00:00'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+```
+
+```ts
+// 케이스별: src/__tests__/integration/repeatSchedule.integration.spec.tsx (제안)
+import { setupMockHandlerCreation } from '../../__mocks__/handlersUtils';
+
+it('INT-001: 매일 반복 생성 후 월/주 뷰 표시 검증', async () => {
+  setupMockHandlerCreation([]); // 테스트 전용 초기 상태
+  // App 렌더 → 폼 입력 → 저장 → 월/주 뷰 검증
+});
+```
+
+#### 케이스 목록 (INT)
+
+- INT-001 생성/표시: 매일 반복 생성 → 월/주 뷰 모두에서 발생 건 일부 샘플이 표시됨을 확인
+- INT-002 단일 수정: 2025-01-15 발생을 단일 수정 → 해당 건은 반복 아이콘 제거(분리), 나머지는 유지
+- INT-003 전체 수정: 2025-01-15 발생 기준 전체 수정 → 모든 발생에 제목/시간 반영, 반복 아이콘 유지
+- INT-004 단일 삭제: 2025-01-15 발생만 삭제 → 다른 발생 건은 그대로 유지
+- INT-005 전체 삭제: 2025-01-15 발생 기준 전체 삭제 → 동일 `repeat.id` 그룹 모두 사라짐
+
+각 케이스는 다음 공통 검증을 수행한다:
+
+- 월간/주간 뷰에서 표출 여부 검증(텍스트 매칭 및 발생 수 샘플 확인)
+- 발생 건 개수 변화(추가/삭제/유지) 검증
+- 반복 아이콘 노출/제거 상태 검증(분리 여부 확인용)
+
+#### 구현 스켈레톤 예시
+
+```ts
+// src/__tests__/integration/repeatSchedule.integration.spec.tsx (제안)
+describe('반복 일정 - 통합', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2025-01-01T00:00:00'));
+  });
+
+  it('INT-001: 매일 반복 생성 후 월/주 뷰 표시 검증', async () => {
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /일정 추가/i }));
+    // 폼 채우기: title/date/time/repeat(endDate 포함)
+    // 저장 후 월간/주간 뷰에서 샘플 날짜(1/1, 1/2, 1/15 등) 노출 확인
+  });
+
+  it('INT-002: 단일 수정 분리 확인', async () => {
+    // 생성 → 1/15 셀에서 일정 클릭 → 편집 → 제목 변경 저장
+    // 1/15만 변경되고 반복 아이콘 제거(분리), 다른 날짜는 기존 제목 유지
+  });
+
+  it('INT-005: 전체 삭제로 모든 발생 제거', async () => {
+    // 생성 → 1/15 셀에서 일정 클릭 → 삭제(전체) → 월/주 뷰에서 동일 그룹 일정 미노출 확인
+  });
+});
+```
