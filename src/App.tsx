@@ -116,8 +116,42 @@ function App() {
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
   const [isRepeatEditDialogOpen, setIsRepeatEditDialogOpen] = useState(false);
   const [repeatEditMode, setRepeatEditMode] = useState<'single' | 'all'>('single');
+  const [isRepeatDeleteDialogOpen, setIsRepeatDeleteDialogOpen] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
 
   const { enqueueSnackbar } = useSnackbar();
+
+  const handleDeleteClick = (event: Event) => {
+    // 반복 일정인 경우 Dialog 표시
+    if (event.repeat.type !== 'none' && event.repeat.id) {
+      setDeletingEvent(event);
+      setIsRepeatDeleteDialogOpen(true);
+    } else {
+      // 단일 일정은 바로 삭제
+      deleteEvent(event.id);
+    }
+  };
+
+  const handleRepeatEventDelete = async (mode: 'single' | 'all') => {
+    if (!deletingEvent) return;
+
+    if (mode === 'single') {
+      // 단일 삭제: 해당 일정만 삭제
+      await deleteEvent(deletingEvent.id);
+    } else {
+      // 전체 삭제: 같은 repeat.id를 가진 모든 일정 삭제
+      const repeatId = deletingEvent.repeat.id;
+      if (repeatId) {
+        const eventsToDelete = events.filter((e) => e.repeat.id === repeatId);
+        for (const event of eventsToDelete) {
+          await deleteEvent(event.id);
+        }
+      }
+    }
+
+    setIsRepeatDeleteDialogOpen(false);
+    setDeletingEvent(null);
+  };
 
   const handleRepeatEventUpdate = async (mode: 'single' | 'all') => {
     if (!editingEvent) return;
@@ -698,7 +732,7 @@ function App() {
                     <IconButton aria-label="Edit event" onClick={() => editEvent(event)}>
                       <Edit />
                     </IconButton>
-                    <IconButton aria-label="Delete event" onClick={() => deleteEvent(event.id)}>
+                    <IconButton aria-label="Delete event" onClick={() => handleDeleteClick(event)}>
                       <Delete />
                     </IconButton>
                   </Stack>
@@ -769,6 +803,31 @@ function App() {
             color="primary"
             onClick={async () => {
               await handleRepeatEventUpdate('all');
+            }}
+          >
+            모든 일정
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isRepeatDeleteDialogOpen} onClose={() => setIsRepeatDeleteDialogOpen(false)}>
+        <DialogTitle>반복 일정 삭제</DialogTitle>
+        <DialogContent>
+          <DialogContentText>이 일정은 반복 일정입니다. 어떻게 삭제하시겠습니까?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRepeatDeleteDialogOpen(false)}>취소</Button>
+          <Button
+            onClick={async () => {
+              await handleRepeatEventDelete('single');
+            }}
+          >
+            이 일정만
+          </Button>
+          <Button
+            color="error"
+            onClick={async () => {
+              await handleRepeatEventDelete('all');
             }}
           >
             모든 일정
