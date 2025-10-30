@@ -1,8 +1,8 @@
 import { EventForm } from '../../types';
 import {
   generateRepeatEvents,
-  detachSingleOccurrence,
   updateRepeatEvents,
+  deleteRepeatEvents,
 } from '../../utils/repeatSchedule';
 
 describe('generateRepeatEvents - TC-001: 매일 반복 일정 생성', () => {
@@ -327,5 +327,34 @@ describe('반복 일정 수정/삭제 - TC-009: 전체 수정', () => {
           e.repeat.id === originalRepeatId
       )
     ).toBe(true);
+  });
+});
+
+describe('반복 일정 삭제 - TC-010: 단일 삭제', () => {
+  const baseEvent: EventForm = {
+    title: '테스트 일정',
+    date: '2025-01-01',
+    startTime: '09:00',
+    endTime: '10:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'daily', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 10,
+  };
+
+  it('반복 일정 중 특정 일정을 단일 삭제하면 해당 일정만 제거되어야 한다', () => {
+    const allEvents = generateRepeatEvents(baseEvent);
+    const targetEvent = allEvents.find((e) => e.date === '2025-01-15')!;
+
+    const afterDelete = deleteRepeatEvents(allEvents, targetEvent.id, 'single');
+
+    // 일정 개수가 1개 감소해야 함
+    expect(afterDelete.length).toBe(allEvents.length - 1);
+
+    // 해당 일정이 제거되고, 나머지 일정들은 반복 일정으로 유지되어야 함 (한 번의 every로 검증)
+    expect(afterDelete.every((e) => e.id !== targetEvent.id && e.repeat.type === 'daily')).toBe(
+      true
+    );
   });
 });

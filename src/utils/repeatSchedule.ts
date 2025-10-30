@@ -371,3 +371,21 @@ export function updateRepeatEvents(
   // mode === 'all': 같은 반복 그룹의 모든 일정 수정
   return updateAllOccurrences(events, repeatId, updates);
 }
+
+/**
+ * 반복 일정의 특정 발생 건이나 전체를 삭제합니다.
+ * @param events 반복 일정 배열
+ * @param occurrenceId 삭제할 일정의 ID
+ * @param mode 'single'이면 해당 일정만 삭제, 'all'이면 전체 삭제
+ * @returns 삭제 후 남은 일정 배열
+ */
+export function deleteRepeatEvents(
+  _events: Event[],
+  _occurrenceId: string,
+  _mode: 'single' | 'all'
+): Event[] {
+  void _events;
+  void _occurrenceId;
+  void _mode;
+  throw new Error('Not implemented: deleteRepeatEvents');
+}
