@@ -1,90 +1,9 @@
-import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { render, screen, within, waitFor } from '@testing-library/react';
-import { UserEvent, userEvent } from '@testing-library/user-event';
-import { SnackbarProvider } from 'notistack';
-import { ReactElement } from 'react';
+import { screen, within, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setupMockHandlerCreation } from '../../__mocks__/handlersUtils';
 import App from '../../App';
-
-const theme = createTheme();
-
-const setup = (element: ReactElement) => {
-  const user = userEvent.setup();
-
-  return {
-    ...render(
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <SnackbarProvider>{element}</SnackbarProvider>
-      </ThemeProvider>
-    ),
-    user,
-  };
-};
-
-/**
- * 반복 일정 생성 헬퍼 함수
- */
-const saveRepeatSchedule = async (
-  user: UserEvent,
-  form: {
-    title: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    repeatType: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    repeatEndDate: string;
-  }
-) => {
-  const { title, date, startTime, endTime, repeatType, repeatEndDate } = form;
-
-  await user.click(screen.getAllByText('일정 추가')[0]);
-  await user.type(screen.getByLabelText('제목'), title);
-  await user.type(screen.getByLabelText('날짜'), date);
-  await user.type(screen.getByLabelText('시작 시간'), startTime);
-  await user.type(screen.getByLabelText('종료 시간'), endTime);
-
-  // 반복 일정 체크박스 활성화
-  const repeatCheckbox = screen.getByLabelText('반복 일정') as HTMLInputElement;
-
-  if (repeatCheckbox.checked) {
-    await user.click(repeatCheckbox);
-  }
-
-  await user.click(repeatCheckbox);
-
-  // 반복 유형 Select가 나타날 때까지 대기
-  await waitFor(() => {
-    const repeatTypeSelect = document.getElementById('repeat-type');
-    expect(repeatTypeSelect).not.toBeNull();
-  });
-
-  const repeatTypeSelect = document.getElementById('repeat-type');
-  await user.click(repeatTypeSelect!);
-
-  await waitFor(() => {
-    const option = document.getElementById(`${repeatType}-option`);
-    expect(option).not.toBeNull();
-  });
-  const option = document.getElementById(`${repeatType}-option`);
-  await user.click(option!);
-
-  // 반복 종료일 입력
-  await waitFor(() => {
-    const input = document.getElementById('repeat-end-date');
-    expect(input).not.toBeNull();
-  });
-
-  const repeatEndDateInput = document.getElementById('repeat-end-date')!;
-  await user.click(repeatEndDateInput);
-  await user.clear(repeatEndDateInput);
-  await user.type(repeatEndDateInput, repeatEndDate);
-
-  await user.click(screen.getByTestId('event-submit-button'));
-};
+import { saveRepeatSchedule, setupTestApp } from './helpers/repeatScheduleTestHelpers';
 
 describe('반복 일정 삭제 - 통합', () => {
   beforeEach(() => {
@@ -97,7 +16,7 @@ describe('반복 일정 삭제 - 통합', () => {
 
   it('INT-DEL-001: 반복 일정 단일 삭제 - 해당 일정만 삭제되고 나머지 유지', async () => {
     setupMockHandlerCreation([]);
-    const { user } = setup(<App />);
+    const { user } = setupTestApp(<App />);
 
     // 1. 반복 일정 생성 (2025-01-01 ~ 2025-01-05, 매일)
     await saveRepeatSchedule(user, {
@@ -164,7 +83,7 @@ describe('반복 일정 삭제 - 통합', () => {
 
   it('INT-DEL-002: 반복 일정 전체 삭제 - 모든 일정이 삭제됨', async () => {
     setupMockHandlerCreation([]);
-    const { user } = setup(<App />);
+    const { user } = setupTestApp(<App />);
 
     // 1. 반복 일정 생성 (2025-01-01 ~ 2025-01-05, 매일)
     await saveRepeatSchedule(user, {
