@@ -54,6 +54,7 @@ import {
   getWeeksAtMonth,
 } from './utils/dateUtils';
 import { findOverlappingEvents } from './utils/eventOverlap';
+import { generateRepeatEvents } from './utils/repeatSchedule';
 import { getTimeErrorMessage } from './utils/timeValidation';
 
 const categories = ['업무', '개인', '가족', '기타'];
@@ -102,8 +103,9 @@ function App() {
     editEvent,
   } = useEventForm();
 
-  const { events, saveEvent, deleteEvent } = useEventOperations(Boolean(editingEvent), () =>
-    setEditingEvent(null)
+  const { events, saveEvent, saveEvents, deleteEvent } = useEventOperations(
+    Boolean(editingEvent),
+    () => setEditingEvent(null)
   );
 
   const { notifications, notifiedEvents, setNotifications } = useNotifications(events);
@@ -126,8 +128,7 @@ function App() {
       return;
     }
 
-    const eventData: Event | EventForm = {
-      id: editingEvent ? editingEvent.id : undefined,
+    const eventForm: EventForm = {
       title,
       date,
       startTime,
@@ -143,13 +144,36 @@ function App() {
       notificationTime,
     };
 
-    const overlapping = findOverlappingEvents(eventData, events);
-    if (overlapping.length > 0) {
-      setOverlappingEvents(overlapping);
-      setIsOverlapDialogOpen(true);
-    } else {
-      await saveEvent(eventData);
+    // 반복 일정인 경우 여러 이벤트 생성 (충돌 검사 없음)
+    if (isRepeating && repeatType !== 'none' && repeatEndDate) {
+      const repeatEvents = generateRepeatEvents(eventForm);
+
+      if (repeatEvents.length === 0) {
+        enqueueSnackbar('반복 일정 생성에 실패했습니다. 종료 날짜를 확인해주세요.', {
+          variant: 'error',
+        });
+        return;
+      }
+
+      // PRD 요구사항: "반복일정은 일정 겹침을 고려하지 않는다"
+      // 충돌 검사 없이 바로 저장
+      await saveEvents(repeatEvents);
       resetForm();
+    } else {
+      // 단일 이벤트 저장 (기존 로직 - 충돌 검사 유지)
+      const eventData: Event | EventForm = {
+        id: editingEvent ? editingEvent.id : undefined,
+        ...eventForm,
+      };
+
+      const overlapping = findOverlappingEvents(eventData, events);
+      if (overlapping.length > 0) {
+        setOverlappingEvents(overlapping);
+        setIsOverlapDialogOpen(true);
+      } else {
+        await saveEvent(eventData);
+        resetForm();
+      }
     }
   };
 
@@ -210,7 +234,7 @@ function App() {
                           >
                             <Stack direction="row" spacing={1} alignItems="center">
                               {isNotified && <Notifications fontSize="small" />}
-                              {isRepeated && <Repeat fontSize="small" />}
+                              {isRepeated && <Repeat data-testid="repeat-icon" fontSize="small" />}
                               <Typography
                                 variant="caption"
                                 noWrap
@@ -299,7 +323,9 @@ function App() {
                                 >
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     {isNotified && <Notifications fontSize="small" />}
-                                    {isRepeated && <Repeat fontSize="small" />}
+                                    {isRepeated && (
+                                      <Repeat data-testid="repeat-icon" fontSize="small" />
+                                    )}
                                     <Typography
                                       variant="caption"
                                       noWrap
@@ -453,16 +479,25 @@ function App() {
           {isRepeating && (
             <Stack spacing={2}>
               <FormControl fullWidth>
-                <FormLabel>반복 유형</FormLabel>
+                <FormLabel htmlFor="repeat-type">반복 유형</FormLabel>
                 <Select
                   size="small"
+                  id="repeat-type"
                   value={repeatType}
                   onChange={(e) => setRepeatType(e.target.value as RepeatType)}
                 >
-                  <MenuItem value="daily">매일</MenuItem>
-                  <MenuItem value="weekly">매주</MenuItem>
-                  <MenuItem value="monthly">매월</MenuItem>
-                  <MenuItem value="yearly">매년</MenuItem>
+                  <MenuItem id="daily-option" value="daily">
+                    매일
+                  </MenuItem>
+                  <MenuItem id="weekly-option" value="weekly">
+                    매주
+                  </MenuItem>
+                  <MenuItem id="monthly-option" value="monthly">
+                    매월
+                  </MenuItem>
+                  <MenuItem id="yearly-option" value="yearly">
+                    매년
+                  </MenuItem>
                 </Select>
               </FormControl>
               <Stack direction="row" spacing={2}>
@@ -477,8 +512,10 @@ function App() {
                   />
                 </FormControl> */}
                 <FormControl fullWidth>
-                  <FormLabel>반복 종료일</FormLabel>
+                  <FormLabel htmlFor="repeat-end-date">반복 종료일</FormLabel>
                   <TextField
+                    aria-label="반복 종료일"
+                    id="repeat-end-date"
                     size="small"
                     type="date"
                     value={repeatEndDate}

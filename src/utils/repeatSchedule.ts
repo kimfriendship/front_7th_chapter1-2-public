@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-
 import { Event, EventForm } from '../types';
 import { formatDate, getDaysInMonth } from './dateUtils';
 
@@ -7,7 +5,7 @@ import { formatDate, getDaysInMonth } from './dateUtils';
  * 고유한 ID를 생성합니다.
  */
 function generateId(): string {
-  return randomUUID();
+  return new Date().getTime() + Math.random().toString(36).substring(2, 15);
 }
 
 /**

@@ -53,6 +53,29 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
     }
   };
 
+  const saveEvents = async (events: Event[]) => {
+    try {
+      const response = await fetch('/api/events-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save events');
+      }
+
+      await fetchEvents();
+      onSave?.();
+      enqueueSnackbar(`일정이 추가되었습니다. (${events.length}개의 일정)`, {
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Error saving events:', error);
+      enqueueSnackbar('일정 저장 실패', { variant: 'error' });
+    }
+  };
+
   const deleteEvent = async (id: string) => {
     try {
       const response = await fetch(`/api/events/${id}`, { method: 'DELETE' });
@@ -79,5 +102,5 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { events, fetchEvents, saveEvent, deleteEvent };
+  return { events, fetchEvents, saveEvent, saveEvents, deleteEvent };
 };
