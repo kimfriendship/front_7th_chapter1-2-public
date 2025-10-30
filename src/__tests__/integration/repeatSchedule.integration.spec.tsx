@@ -156,4 +156,84 @@ describe('반복 일정 - 통합', () => {
     expect(within(day3Cell).getByText('반복 생성')).toBeInTheDocument();
     expect(within(day3Cell).getByTestId('repeat-icon')).toBeInTheDocument();
   });
+
+  it('INT-003: 단일 일정을 반복 일정으로 변경', async () => {
+    // 1. 초기 단일 일정 설정
+    setupMockHandlerCreation([
+      {
+        id: '1',
+        title: '단일 일정',
+        date: '2025-01-01',
+        startTime: '09:00',
+        endTime: '10:00',
+        description: '',
+        location: '',
+        category: '업무',
+        repeat: { type: 'none', interval: 1 },
+        notificationTime: 10,
+      },
+    ]);
+    const { user } = setup(<App />);
+
+    // 2. 월간 뷰에서 생성된 일정 확인 (반복 아이콘 없음)
+    const monthView = await screen.findByTestId('month-view');
+    await waitFor(() => {
+      const day1Cell = within(monthView).getByText('1').closest('td')!;
+      expect(within(day1Cell).getByText('단일 일정')).toBeInTheDocument();
+      expect(within(day1Cell).queryByTestId('repeat-icon')).not.toBeInTheDocument();
+    });
+
+    // 3. event-list에서 "단일 일정" 카드의 Edit 버튼 클릭
+    const eventList = screen.getByTestId('event-list');
+    const eventCard = within(eventList)
+      .getByText('단일 일정')
+      .closest('div[class*="Box"]') as HTMLElement;
+    const editButton = within(eventCard).getByLabelText('Edit event');
+    await user.click(editButton);
+
+    // 4. 반복 일정 체크박스 활성화
+    const repeatCheckbox = screen.getByLabelText('반복 일정') as HTMLInputElement;
+    await user.click(repeatCheckbox);
+
+    // 5. 반복 유형 선택 (매일)
+    await waitFor(() => {
+      const repeatTypeSelect = document.getElementById('repeat-type');
+      expect(repeatTypeSelect).not.toBeNull();
+    });
+
+    const repeatTypeSelect = document.getElementById('repeat-type');
+    await user.click(repeatTypeSelect!);
+
+    await waitFor(() => {
+      const option = document.getElementById('daily-option');
+      expect(option).not.toBeNull();
+    });
+    const dailyOption = document.getElementById('daily-option');
+    await user.click(dailyOption!);
+
+    // 6. 반복 종료일 설정
+    await waitFor(() => {
+      const input = document.getElementById('repeat-end-date');
+      expect(input).not.toBeNull();
+    });
+
+    const repeatEndDateInput = document.getElementById('repeat-end-date')!;
+    await user.click(repeatEndDateInput);
+    await user.clear(repeatEndDateInput);
+    await user.type(repeatEndDateInput, '2025-01-03');
+
+    // 7. 저장
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 8. 검증: 원본 일정 삭제되고, 1일, 2일, 3일에 반복 일정이 생성됨
+    await waitFor(() => {
+      // getAllByText로 모든 "단일 일정" 요소 찾기 (3개여야 함)
+      const allEvents = within(monthView).getAllByText('단일 일정');
+      expect(allEvents).toHaveLength(3);
+
+      // 모든 반복 아이콘 찾기 (3개여야 함)
+      const allRepeatIcons = within(monthView).getAllByTestId('repeat-icon');
+      expect(allRepeatIcons).toHaveLength(3);
+    });
+  });
 });
