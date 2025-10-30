@@ -1,5 +1,9 @@
 import { EventForm } from '../../types';
-import { generateRepeatEvents } from '../../utils/repeatSchedule';
+import {
+  generateRepeatEvents,
+  detachSingleOccurrence,
+  updateRepeatEvents,
+} from '../../utils/repeatSchedule';
 
 describe('generateRepeatEvents - TC-001: 매일 반복 일정 생성', () => {
   const baseEvent: EventForm = {
@@ -244,5 +248,45 @@ describe('generateRepeatEvents - TC-006: 매년 반복 일정 생성 (2월 29일
     expect(date.getFullYear()).toBe(2024);
     expect(date.getMonth() + 1).toBe(2);
     expect(date.getDate()).toBe(29);
+  });
+});
+
+describe('반복 일정 수정/삭제 - TC-008: 단일 수정', () => {
+  const baseEvent: EventForm = {
+    title: '테스트 일정',
+    date: '2025-01-01',
+    startTime: '09:00',
+    endTime: '10:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'daily', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 10,
+  };
+
+  it('반복 일정 중 특정 일정을 단일 수정하면 해당 일정만 반복에서 분리되어야 한다', () => {
+    const allEvents = generateRepeatEvents(baseEvent);
+    const targetEvent = allEvents.find((e) => e.date === '2025-01-15');
+
+    // 단일 발생 분리 호출
+    const detached = detachSingleOccurrence(targetEvent!);
+    expect(detached.repeat.type).toBe('none');
+
+    // 단일 수정 호출
+    const updatedAll = updateRepeatEvents(
+      allEvents,
+      targetEvent!.id,
+      { title: '수정된 일정' },
+      'single'
+    );
+    const updatedEvent = updatedAll.find((e) => e.id === targetEvent!.id)!;
+
+    // 단일 수정된 일정은 repeat.type이 'none'이어야 함 + 제목 변경 확인
+    expect(updatedEvent.repeat.type).toBe('none');
+    expect(updatedEvent.title).toBe('수정된 일정');
+
+    // 나머지 일정들은 반복 일정으로 유지되어야 함
+    const otherEvents = updatedAll.filter((e) => e.id !== targetEvent!.id);
+    expect(otherEvents.every((e) => e.repeat.type === 'daily')).toBe(true);
   });
 });

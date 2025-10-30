@@ -207,3 +207,29 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
       return [];
   }
 }
+
+/**
+ * 단일 발생 건을 반복에서 분리합니다.
+ * 구현 예정: 해당 일정의 repeat를 none으로 변경하고, 식별자/메타를 적절히 처리
+ */
+export function detachSingleOccurrence(_event: Event): Event {
+  void _event;
+  throw new Error('Not implemented: detachSingleOccurrence');
+}
+
+/**
+ * 반복 일정의 특정 발생 건이나 전체를 업데이트합니다.
+ * 구현 예정: mode에 따라 single/all 처리 분기
+ */
+export function updateRepeatEvents(
+  _events: Event[],
+  _occurrenceId: string,
+  _updates: Partial<Event>,
+  _mode: 'single' | 'all'
+): Event[] {
+  void _events;
+  void _occurrenceId;
+  void _updates;
+  void _mode;
+  throw new Error('Not implemented: updateRepeatEvents');
+}
