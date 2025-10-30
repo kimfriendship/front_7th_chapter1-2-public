@@ -65,3 +65,38 @@ describe('generateRepeatEvents - TC-001: 매일 반복 일정 생성', () => {
     expect(events.every((e) => e.startTime === '09:00' && e.endTime === '10:00')).toBe(true);
   });
 });
+
+describe('generateRepeatEvents - TC-002: 매주 반복 일정 생성', () => {
+  const baseEvent: EventForm = {
+    title: '주간 회의',
+    date: '2025-01-01', // 수요일
+    startTime: '14:00',
+    endTime: '15:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'weekly', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 30,
+  };
+
+  it('2025-01-01(수요일)부터 매주 반복 일정을 생성하면 52개의 일정이 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(52);
+  });
+
+  it('첫 번째 일정의 날짜는 시작 날짜와 일치해야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events[0].date).toBe('2025-01-01');
+  });
+
+  it('모든 일정이 수요일에 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    events.forEach((event) => {
+      const date = new Date(event.date);
+      expect(date.getDay()).toBe(3); // 3 = 수요일
+    });
+  });
+});
