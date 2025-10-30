@@ -73,6 +73,41 @@ function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
 }
 
 /**
+ * 날짜가 존재하고 종료 날짜 이내인 경우 일정을 생성합니다.
+ * @param eventForm 원본 이벤트 폼 데이터
+ * @param year 년도
+ * @param month 월 (1-12)
+ * @param day 일
+ * @param endDate 종료 날짜
+ * @returns 생성된 일정 또는 null
+ */
+function createEventIfValid(
+  eventForm: EventForm,
+  year: number,
+  month: number,
+  day: number,
+  endDate: Date
+): Event | null {
+  const daysInMonth = getDaysInMonth(year, month);
+  if (day > daysInMonth) {
+    return null; // 해당 날짜가 존재하지 않으면 null 반환
+  }
+
+  const eventDate = new Date(year, month - 1, day);
+
+  // 종료 날짜를 넘지 않는 경우에만 일정 생성
+  if (eventDate <= endDate) {
+    return {
+      ...eventForm,
+      id: generateId(),
+      date: formatDate(eventDate),
+    };
+  }
+
+  return null;
+}
+
+/**
  * 매월 반복 일정을 생성합니다.
  * @param eventForm 원본 이벤트 폼 데이터
  * @param startDate 시작 날짜
@@ -91,20 +126,10 @@ function generateMonthlyRepeatEvents(
   while (currentDate <= endDate) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    const daysInMonth = getDaysInMonth(year, month);
+    const event = createEventIfValid(eventForm, year, month, startDay, endDate);
 
-    // 해당 월에 시작 일이 존재하는 경우에만 일정 생성
-    if (startDay <= daysInMonth) {
-      const eventDate = new Date(year, month - 1, startDay);
-
-      // 종료 날짜를 넘지 않는 경우에만 추가
-      if (eventDate <= endDate) {
-        events.push({
-          ...eventForm,
-          id: generateId(),
-          date: formatDate(eventDate),
-        });
-      }
+    if (event) {
+      events.push(event);
     }
 
     // 다음 달로 이동
@@ -131,21 +156,10 @@ function generateYearlyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
 
   // 시작 년도부터 종료 년도까지 반복
   for (let year = startYear; year <= endYear; year++) {
-    // 해당 년도에 시작 월/일이 존재하는지 확인 (예: 2월 29일)
-    const daysInMonth = getDaysInMonth(year, startMonth);
-    if (startDay > daysInMonth) {
-      continue; // 해당 날짜가 존재하지 않으면 건너뛰기
-    }
+    const event = createEventIfValid(eventForm, year, startMonth, startDay, endDate);
 
-    const eventDate = new Date(year, startMonth - 1, startDay);
-
-    // 종료 날짜를 넘지 않는 경우에만 추가
-    if (eventDate <= endDate) {
-      events.push({
-        ...eventForm,
-        id: generateId(),
-        date: formatDate(eventDate),
-      });
+    if (event) {
+      events.push(event);
     }
   }
 
