@@ -380,12 +380,25 @@ export function updateRepeatEvents(
  * @returns 삭제 후 남은 일정 배열
  */
 export function deleteRepeatEvents(
-  _events: Event[],
-  _occurrenceId: string,
-  _mode: 'single' | 'all'
+  events: Event[],
+  occurrenceId: string,
+  mode: 'single' | 'all'
 ): Event[] {
-  void _events;
-  void _occurrenceId;
-  void _mode;
-  throw new Error('Not implemented: deleteRepeatEvents');
+  const targetEvent = events.find((event) => event.id === occurrenceId);
+  if (!targetEvent) {
+    return events;
+  }
+
+  if (mode === 'single') {
+    // 단일 삭제: 해당 일정만 제거
+    return events.filter((event) => event.id !== occurrenceId);
+  }
+
+  // 전체 삭제: 같은 반복 그룹의 모든 일정 제거
+  const repeatId = targetEvent.repeat.id;
+  if (!repeatId) {
+    return events.filter((event) => event.id !== occurrenceId);
+  }
+
+  return events.filter((event) => event.repeat.id !== repeatId);
 }
