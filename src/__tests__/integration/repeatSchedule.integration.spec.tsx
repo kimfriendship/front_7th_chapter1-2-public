@@ -236,4 +236,66 @@ describe('반복 일정 - 통합', () => {
       expect(allRepeatIcons).toHaveLength(3);
     });
   });
+
+  it('INT-004: 반복 종료일 input에서 2025-12-31까지만 선택 가능해야 함', async () => {
+    setupMockHandlerCreation([]);
+    const { user } = setup(<App />);
+
+    // 1. 일정 추가 버튼 클릭
+    await user.click(screen.getAllByText('일정 추가')[0]);
+
+    // 2. 반복 일정 체크박스 활성화
+    const repeatCheckbox = screen.getByLabelText('반복 일정') as HTMLInputElement;
+
+    // 체크박스가 이미 checked 상태이면 unchecked로 만들기
+    if (repeatCheckbox.checked) {
+      await user.click(repeatCheckbox);
+    }
+
+    // 이제 checked 상태로 만들기
+    await user.click(repeatCheckbox);
+
+    // 3. 반복 유형 Select가 나타날 때까지 대기
+    await waitFor(() => {
+      const repeatTypeSelect = document.getElementById('repeat-type');
+      expect(repeatTypeSelect).not.toBeNull();
+    });
+
+    // 4. 반복 유형 선택 (매일)
+    const repeatTypeSelect = document.getElementById('repeat-type');
+    await user.click(repeatTypeSelect!);
+
+    await waitFor(() => {
+      const option = document.getElementById('daily-option');
+      expect(option).not.toBeNull();
+    });
+    const dailyOption = document.getElementById('daily-option');
+    await user.click(dailyOption!);
+
+    // 5. 반복 종료일 input 필드가 나타날 때까지 대기
+    await waitFor(() => {
+      const repeatEndDateInput = document.getElementById('repeat-end-date');
+      expect(repeatEndDateInput).not.toBeNull();
+    });
+
+    // 6. 반복 종료일 input 필드의 max 속성이 2025-12-31로 설정되어 있는지 확인
+    const repeatEndDateInput = document.getElementById('repeat-end-date') as HTMLInputElement;
+    expect(repeatEndDateInput).not.toBeNull();
+    expect(repeatEndDateInput.max).toBe('2025-12-31');
+    expect(repeatEndDateInput.type).toBe('date');
+
+    // 7. 2025-12-31 날짜를 입력할 수 있는지 확인
+    await user.click(repeatEndDateInput);
+    await user.clear(repeatEndDateInput);
+    await user.type(repeatEndDateInput, '2025-12-31');
+    expect(repeatEndDateInput.value).toBe('2025-12-31');
+
+    // 8. 2025-12-31 이전 날짜도 선택 가능한지 확인
+    await user.clear(repeatEndDateInput);
+    await user.type(repeatEndDateInput, '2025-12-30');
+    expect(repeatEndDateInput.value).toBe('2025-12-30');
+
+    // 9. max 속성 확인 (2025-12-31까지만 선택 가능)
+    expect(repeatEndDateInput.getAttribute('max')).toBe('2025-12-31');
+  });
 });

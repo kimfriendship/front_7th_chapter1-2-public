@@ -222,7 +222,13 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
 
   // 시작 날짜와 종료 날짜 파싱
   const startDate = new Date(date);
-  const endDate = new Date(repeat.endDate);
+  let endDate = new Date(repeat.endDate);
+
+  // 반복 종료일은 최대 2025-12-31까지만 허용
+  const maxEndDate = new Date('2025-12-31');
+  if (endDate > maxEndDate) {
+    endDate = maxEndDate;
+  }
 
   // 날짜 범위 유효성 검증
   if (!isValidDateRange(startDate, endDate)) {
