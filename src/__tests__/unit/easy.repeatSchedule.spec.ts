@@ -184,3 +184,34 @@ describe('generateRepeatEvents - TC-004: 매월 반복 일정 생성 (31일 처�
     expect(actualMonths).toEqual(expectedMonths);
   });
 });
+
+describe('generateRepeatEvents - TC-005: 매년 반복 일정 생성 (일반 날짜)', () => {
+  const baseEvent: EventForm = {
+    title: '연간 회의',
+    date: '2025-06-15',
+    startTime: '09:00',
+    endTime: '17:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'yearly', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 1440,
+  };
+
+  it('2025-06-15부터 매년 반복 일정을 생성하면 1개의 일정만 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(1); // 같은 해 내에서는 1개만 생성
+  });
+
+  it('일정이 2025년 6월 15일에 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(1);
+
+    const date = new Date(events[0].date);
+    expect(date.getFullYear()).toBe(2025);
+    expect(date.getMonth() + 1).toBe(6);
+    expect(date.getDate()).toBe(15);
+  });
+});
