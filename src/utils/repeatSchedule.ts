@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 
 import { Event, EventForm } from '../types';
-import { formatDate } from './dateUtils';
+import { formatDate, getDaysInMonth } from './dateUtils';
 
 /**
  * 고유한 ID를 생성합니다.
@@ -76,7 +76,7 @@ function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
  * 매월 반복 일정을 생성합니다.
  * @param eventForm 원본 이벤트 폼 데이터
  * @param startDate 시작 날짜
- * @param endDate 종료 날짜 семьи
+ * @param endDate 종료 날짜
  * @returns 생성된 반복 일정 배열
  */
 function generateMonthlyRepeatEvents(
@@ -91,7 +91,7 @@ function generateMonthlyRepeatEvents(
   while (currentDate <= endDate) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysInMonth = getDaysInMonth(year, month);
 
     // 해당 월에 시작 일이 존재하는 경우에만 일정 생성
     if (startDay <= daysInMonth) {
