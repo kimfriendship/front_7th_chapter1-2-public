@@ -45,6 +45,30 @@ function generateDailyRepeatEvents(eventForm: EventForm, startDate: Date, endDat
 }
 
 /**
+ * 매주 반복 일정을 생성합니다.
+ * @param eventForm 원본 이벤트 폼 데이터
+ * @param startDate 시작 날짜
+ * @param endDate 종료 날짜
+ * @returns 생성된 반복 일정 배열
+ */
+function generateWeeklyRepeatEvents(eventForm: EventForm, startDate: Date, endDate: Date): Event[] {
+  const events: Event[] = [];
+  const currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    events.push({
+      ...eventForm,
+      id: generateId(),
+      date: formatDate(currentDate),
+    });
+
+    currentDate.setDate(currentDate.getDate() + 7);
+  }
+
+  return events;
+}
+
+/**
  * 반복 일정을 생성하는 함수
  * @param eventForm 반복 일정의 원본 이벤트 폼 데이터
  * @returns 생성된 반복 일정 배열
@@ -74,6 +98,11 @@ export function generateRepeatEvents(eventForm: EventForm): Event[] {
   // 매일 반복 처리
   if (repeat.type === 'daily') {
     return generateDailyRepeatEvents(eventForm, startDate, endDate);
+  }
+
+  // 매주 반복 처리
+  if (repeat.type === 'weekly') {
+    return generateWeeklyRepeatEvents(eventForm, startDate, endDate);
   }
 
   return [];

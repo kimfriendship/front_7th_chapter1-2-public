@@ -79,10 +79,10 @@ describe('generateRepeatEvents - TC-002: 매주 반복 일정 생성', () => {
     notificationTime: 30,
   };
 
-  it('2025-01-01(수요일)부터 매주 반복 일정을 생성하면 52개의 일정이 생성되어야 한다', () => {
+  it('2025-01-01(수요일)부터 매주 반복 일정을 생성하면 53개의 일정이 생성되어야 한다', () => {
     const events = generateRepeatEvents(baseEvent);
 
-    expect(events).toHaveLength(52);
+    expect(events).toHaveLength(53); // 2025년 1월 1일부터 12월 31일까지 매주 수요일 = 53개
   });
 
   it('첫 번째 일정의 날짜는 시작 날짜와 일치해야 한다', () => {
