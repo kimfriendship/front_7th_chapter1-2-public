@@ -131,6 +131,12 @@ function generateYearlyRepeatEvents(eventForm: EventForm, startDate: Date, endDa
 
   // 시작 년도부터 종료 년도까지 반복
   for (let year = startYear; year <= endYear; year++) {
+    // 해당 년도에 시작 월/일이 존재하는지 확인 (예: 2월 29일)
+    const daysInMonth = getDaysInMonth(year, startMonth);
+    if (startDay > daysInMonth) {
+      continue; // 해당 날짜가 존재하지 않으면 건너뛰기
+    }
+
     const eventDate = new Date(year, startMonth - 1, startDay);
 
     // 종료 날짜를 넘지 않는 경우에만 추가
