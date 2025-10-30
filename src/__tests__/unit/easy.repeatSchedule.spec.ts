@@ -215,3 +215,34 @@ describe('generateRepeatEvents - TC-005: 매년 반복 일정 생성 (일반 날
     expect(date.getDate()).toBe(15);
   });
 });
+
+describe('generateRepeatEvents - TC-006: 매년 반복 일정 생성 (2월 29일 처리)', () => {
+  const baseEvent: EventForm = {
+    title: '윤년 생일',
+    date: '2024-02-29',
+    startTime: '00:00',
+    endTime: '23:59',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'yearly', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 0,
+  };
+
+  it('2024-02-29부터 매년 반복 일정을 생성하면 1개의 일정만 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(1); // 2024년만 2월 29일이 존재
+  });
+
+  it('일정이 2024년 2월 29일에 생성되어야 한다', () => {
+    const events = generateRepeatEvents(baseEvent);
+
+    expect(events).toHaveLength(1);
+
+    const date = new Date(events[0].date);
+    expect(date.getFullYear()).toBe(2024);
+    expect(date.getMonth() + 1).toBe(2);
+    expect(date.getDate()).toBe(29);
+  });
+});
