@@ -139,11 +139,12 @@ describe('반복 일정 수정 - 통합', () => {
     await user.clear(screen.getByLabelText('종료 시간'));
     await user.type(screen.getByLabelText('종료 시간'), '10:30');
 
-    // 6. "이 일정만" 옵션 선택 (Dialog 나타날 예정)
-    // TODO: Dialog UI 구현 시 여기서 "이 일정만" 버튼 클릭 로직 추가
-
-    // 7. 저장
+    // 6. 저장 버튼 클릭 (Dialog 나타남)
     await user.click(screen.getByTestId('event-submit-button'));
+
+    // 7. Dialog에서 "이 일정만" 버튼 클릭
+    const singleButton = await screen.findByText('이 일정만');
+    await user.click(singleButton);
 
     // 8. 검증: 1월 3일만 변경되고 반복 아이콘 제거됨
     await waitFor(() => {
@@ -211,11 +212,12 @@ describe('반복 일정 수정 - 통합', () => {
     await user.clear(screen.getByLabelText('종료 시간'));
     await user.type(screen.getByLabelText('종료 시간'), '16:00');
 
-    // 6. "모든 일정" 옵션 선택 (Dialog 나타날 예정)
-    // TODO: Dialog UI 구현 시 여기서 "모든 일정" 버튼 클릭 로직 추가
-
-    // 7. 저장
+    // 6. 저장 버튼 클릭 (Dialog 나타남)
     await user.click(screen.getByTestId('event-submit-button'));
+
+    // 7. Dialog에서 "모든 일정" 버튼 클릭
+    const allButton = await screen.findByText('모든 일정');
+    await user.click(allButton);
 
     // 8. 검증: 모든 일정이 변경되고 반복 아이콘 유지
     await waitFor(() => {

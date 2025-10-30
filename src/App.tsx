@@ -54,7 +54,7 @@ import {
   getWeeksAtMonth,
 } from './utils/dateUtils';
 import { findOverlappingEvents } from './utils/eventOverlap';
-import { generateRepeatEvents } from './utils/repeatSchedule';
+import { generateRepeatEvents, updateRepeatEvents } from './utils/repeatSchedule';
 import { getTimeErrorMessage } from './utils/timeValidation';
 
 const categories = ['업무', '개인', '가족', '기타'];
@@ -114,8 +114,55 @@ function App() {
 
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
+  const [isRepeatEditDialogOpen, setIsRepeatEditDialogOpen] = useState(false);
+  const [repeatEditMode, setRepeatEditMode] = useState<'single' | 'all'>('single');
 
   const { enqueueSnackbar } = useSnackbar();
+
+  const handleRepeatEventUpdate = async (mode: 'single' | 'all') => {
+    if (!editingEvent) return;
+
+    const updates: Partial<Event> = {
+      title,
+      date,
+      startTime,
+      endTime,
+      description,
+      location,
+      category,
+      notificationTime,
+    };
+
+    if (mode === 'single') {
+      // 단일 수정: 해당 이벤트만 수정하고 반복에서 분리
+      const updatedEvent: Event = {
+        ...editingEvent,
+        ...updates,
+        repeat: {
+          type: 'none',
+          interval: 1,
+        },
+      };
+      await saveEvent(updatedEvent);
+    } else {
+      // 전체 수정: 같은 repeat.id를 가진 모든 이벤트 수정
+      const repeatId = editingEvent.repeat.id;
+      if (repeatId) {
+        const eventsToUpdate = events.filter((e) => e.repeat.id === repeatId);
+        for (const event of eventsToUpdate) {
+          const updatedEvent: Event = {
+            ...event,
+            ...updates,
+            date: event.date, // 날짜는 각 발생 건마다 다르므로 유지
+          };
+          await saveEvent(updatedEvent);
+        }
+      }
+    }
+
+    setIsRepeatEditDialogOpen(false);
+    resetForm();
+  };
 
   const addOrUpdateEvent = async () => {
     if (!title || !date || !startTime || !endTime) {
@@ -143,6 +190,12 @@ function App() {
       },
       notificationTime,
     };
+
+    // 반복 일정 편집 중인 경우 Dialog 표시
+    if (editingEvent && editingEvent.repeat.type !== 'none' && editingEvent.repeat.id) {
+      setIsRepeatEditDialogOpen(true);
+      return;
+    }
 
     // 반복 일정인 경우 여러 이벤트 생성 (충돌 검사 없음)
     if (isRepeating && repeatType !== 'none' && repeatEndDate) {
@@ -694,6 +747,31 @@ function App() {
             }}
           >
             계속 진행
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isRepeatEditDialogOpen} onClose={() => setIsRepeatEditDialogOpen(false)}>
+        <DialogTitle>반복 일정 수정</DialogTitle>
+        <DialogContent>
+          <DialogContentText>이 일정은 반복 일정입니다. 어떻게 수정하시겠습니까?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRepeatEditDialogOpen(false)}>취소</Button>
+          <Button
+            onClick={async () => {
+              await handleRepeatEventUpdate('single');
+            }}
+          >
+            이 일정만
+          </Button>
+          <Button
+            color="primary"
+            onClick={async () => {
+              await handleRepeatEventUpdate('all');
+            }}
+          >
+            모든 일정
           </Button>
         </DialogActions>
       </Dialog>
