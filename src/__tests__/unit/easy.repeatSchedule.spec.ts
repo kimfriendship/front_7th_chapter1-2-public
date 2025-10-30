@@ -358,3 +358,27 @@ describe('반복 일정 삭제 - TC-010: 단일 삭제', () => {
     );
   });
 });
+
+describe('반복 일정 삭제 - TC-011: 전체 삭제', () => {
+  const baseEvent: EventForm = {
+    title: '테스트 일정',
+    date: '2025-01-01',
+    startTime: '09:00',
+    endTime: '10:00',
+    description: '',
+    location: '',
+    category: '',
+    repeat: { type: 'daily', interval: 1, endDate: '2025-12-31' },
+    notificationTime: 10,
+  };
+
+  it('반복 일정 중 특정 일정을 전체 삭제하면 해당 반복 그룹의 모든 일정이 제거되어야 한다', () => {
+    const allEvents = generateRepeatEvents(baseEvent);
+    const targetEvent = allEvents.find((e) => e.date === '2025-01-15')!;
+
+    const afterDeleteAll = deleteRepeatEvents(allEvents, targetEvent.id, 'all');
+
+    // 전체 삭제 시 해당 반복 그룹의 모든 일정이 제거되어야 함
+    expect(afterDeleteAll.length).toBe(0);
+  });
+});
