@@ -65,34 +65,38 @@ describe('반복 일정 수정 - 통합', () => {
     const singleButton = await screen.findByText('이 일정만');
     await user.click(singleButton);
 
-    // 8. Dialog가 닫힐 때까지 대기
+    // 8. Dialog가 닫히고 상태 업데이트가 완료될 때까지 대기
     await waitFor(() => {
       expect(screen.queryByText('반복 일정 수정')).not.toBeInTheDocument();
     });
 
-    // 9. 변경된 제목의 일정이 나타날 때까지 대기 (최종 상태 확인)
-    const changedEvent = within(monthView).getByText('매일 스탠드업 (변경됨)');
-    expect(changedEvent).toBeInTheDocument();
+    // 9-12. saveEvent 완료 후 fetchEvents로 상태가 업데이트될 때까지 기다린 후 모든 검증 수행
+    // (하나의 waitFor로 묶어서 효율적으로 처리하고 타임아웃 방지)
+    await waitFor(() => {
+      // 변경된 제목의 일정이 나타났는지 확인
+      const changedEvent = within(monthView).getByText('매일 스탠드업 (변경됨)');
+      expect(changedEvent).toBeInTheDocument();
 
-    // 10. 기존 제목이 4개로 줄어들었는지 확인
-    const originalEvents = within(monthView).getAllByText('매일 스탠드업');
-    expect(originalEvents).toHaveLength(4);
+      // 기존 제목이 4개로 줄어들었는지 확인
+      const originalEvents = within(monthView).getAllByText('매일 스탠드업');
+      expect(originalEvents).toHaveLength(4);
 
-    // 11. 1월 3일 셀 확인: 반복 아이콘이 없어야 함
-    const day3Cell = within(monthView).getByText('3').closest('td')!;
-    const changedEventInCell = within(day3Cell).getByText('매일 스탠드업 (변경됨)');
-    expect(changedEventInCell).toBeInTheDocument();
+      // 1월 3일 셀 확인: 반복 아이콘이 없어야 함
+      const day3Cell = within(monthView).getByText('3').closest('td')!;
+      const changedEventInCell = within(day3Cell).getByText('매일 스탠드업 (변경됨)');
+      expect(changedEventInCell).toBeInTheDocument();
 
-    // 해당 이벤트에 반복 아이콘이 없어야 함
-    const repeatIconsInDay3 = within(day3Cell).queryAllByTestId('repeat-icon');
-    expect(repeatIconsInDay3).toHaveLength(0);
+      // 해당 이벤트에 반복 아이콘이 없어야 함
+      const repeatIconsInDay3 = within(day3Cell).queryAllByTestId('repeat-icon');
+      expect(repeatIconsInDay3).toHaveLength(0);
 
-    // 12. 다른 날짜들은 반복 아이콘 유지
-    const day1Cell = within(monthView).getByText('1').closest('td')!;
-    expect(within(day1Cell).getByTestId('repeat-icon')).toBeInTheDocument();
+      // 다른 날짜들은 반복 아이콘 유지
+      const day1Cell = within(monthView).getByText('1').closest('td')!;
+      expect(within(day1Cell).getByTestId('repeat-icon')).toBeInTheDocument();
 
-    const day2Cell = within(monthView).getByText('2').closest('td')!;
-    expect(within(day2Cell).getByTestId('repeat-icon')).toBeInTheDocument();
+      const day2Cell = within(monthView).getByText('2').closest('td')!;
+      expect(within(day2Cell).getByTestId('repeat-icon')).toBeInTheDocument();
+    });
   });
 
   it('INT-EDIT-002: 반복 일정 전체 수정 - 모든 일정이 수정되고 반복 아이콘 유지', async () => {
@@ -140,24 +144,23 @@ describe('반복 일정 수정 - 통합', () => {
     const allButton = await screen.findByText('모든 일정');
     await user.click(allButton);
 
-    // 8. Dialog가 닫힐 때까지 대기
+    // 8. Dialog가 닫히고 상태 업데이트가 완료될 때까지 대기
     await waitFor(() => {
       expect(screen.queryByText('반복 일정 수정')).not.toBeInTheDocument();
     });
 
-    // 9. 모든 일정이 새 제목으로 변경되었는지 확인
+    // 9-10. saveEvent 완료 후 fetchEvents로 상태가 업데이트될 때까지 기다린 후 검증 수행
     await waitFor(() => {
+      // 모든 일정이 새 제목으로 변경되었는지 확인
       const allEvents = within(monthView).getAllByText('매일 팀 회의');
       expect(allEvents).toHaveLength(5);
-    });
 
-    // 10. 모든 반복 아이콘이 유지되는지 확인
-    await waitFor(() => {
+      // 모든 반복 아이콘이 유지되는지 확인
       const allRepeatIcons = within(monthView).getAllByTestId('repeat-icon');
       expect(allRepeatIcons).toHaveLength(5);
     });
 
-    // 11. 이벤트 리스트에서 시간 변경 확인
+    // 11. 이벤트 리스트에서 시간 변경 확인 (이미 상태가 업데이트되었으므로 바로 조회 가능)
     const timeElements = eventList.getAllByText('15:00 - 16:00');
     expect(timeElements.length).toBeGreaterThanOrEqual(1);
   });
