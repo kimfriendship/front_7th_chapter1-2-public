@@ -65,18 +65,20 @@ describe('반복 일정 수정 - 통합', () => {
     const singleButton = await screen.findByText('이 일정만');
     await user.click(singleButton);
 
-    // 8. 검증: 1월 3일만 변경되고 반복 아이콘 제거됨
+    // 8. Dialog가 닫힐 때까지 대기
     await waitFor(() => {
-      // 기존 제목 4개
-      const originalEvents = within(monthView).getAllByText('매일 스탠드업');
-      expect(originalEvents).toHaveLength(4);
-
-      // 변경된 제목 1개
-      const changedEvent = within(monthView).getByText('매일 스탠드업 (변경됨)');
-      expect(changedEvent).toBeInTheDocument();
+      expect(screen.queryByText('반복 일정 수정')).not.toBeInTheDocument();
     });
 
-    // 9. 1월 3일 셀 확인: 반복 아이콘이 없어야 함
+    // 9. 변경된 제목의 일정이 나타날 때까지 대기 (최종 상태 확인)
+    const changedEvent = within(monthView).getByText('매일 스탠드업 (변경됨)');
+    expect(changedEvent).toBeInTheDocument();
+
+    // 10. 기존 제목이 4개로 줄어들었는지 확인
+    const originalEvents = within(monthView).getAllByText('매일 스탠드업');
+    expect(originalEvents).toHaveLength(4);
+
+    // 11. 1월 3일 셀 확인: 반복 아이콘이 없어야 함
     const day3Cell = within(monthView).getByText('3').closest('td')!;
     const changedEventInCell = within(day3Cell).getByText('매일 스탠드업 (변경됨)');
     expect(changedEventInCell).toBeInTheDocument();
@@ -85,7 +87,7 @@ describe('반복 일정 수정 - 통합', () => {
     const repeatIconsInDay3 = within(day3Cell).queryAllByTestId('repeat-icon');
     expect(repeatIconsInDay3).toHaveLength(0);
 
-    // 10. 다른 날짜들은 반복 아이콘 유지
+    // 12. 다른 날짜들은 반복 아이콘 유지
     const day1Cell = within(monthView).getByText('1').closest('td')!;
     expect(within(day1Cell).getByTestId('repeat-icon')).toBeInTheDocument();
 
@@ -138,18 +140,24 @@ describe('반복 일정 수정 - 통합', () => {
     const allButton = await screen.findByText('모든 일정');
     await user.click(allButton);
 
-    // 8. 검증: 모든 일정이 변경되고 반복 아이콘 유지
+    // 8. Dialog가 닫힐 때까지 대기
     await waitFor(() => {
-      // 모든 일정이 새 제목으로 변경됨
+      expect(screen.queryByText('반복 일정 수정')).not.toBeInTheDocument();
+    });
+
+    // 9. 모든 일정이 새 제목으로 변경되었는지 확인
+    await waitFor(() => {
       const allEvents = within(monthView).getAllByText('매일 팀 회의');
       expect(allEvents).toHaveLength(5);
+    });
 
-      // 모든 반복 아이콘 유지
+    // 10. 모든 반복 아이콘이 유지되는지 확인
+    await waitFor(() => {
       const allRepeatIcons = within(monthView).getAllByTestId('repeat-icon');
       expect(allRepeatIcons).toHaveLength(5);
     });
 
-    // 9. 이벤트 리스트에서 시간 변경 확인
+    // 11. 이벤트 리스트에서 시간 변경 확인
     const timeElements = eventList.getAllByText('15:00 - 16:00');
     expect(timeElements.length).toBeGreaterThanOrEqual(1);
   });
