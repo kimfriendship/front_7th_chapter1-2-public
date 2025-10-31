@@ -4,6 +4,7 @@ import { render, screen, waitFor, RenderResult } from '@testing-library/react';
 import { UserEvent, userEvent } from '@testing-library/user-event';
 import { SnackbarProvider } from 'notistack';
 import { ReactElement } from 'react';
+import { expect } from 'vitest';
 
 const theme = createTheme();
 
